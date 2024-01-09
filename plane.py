@@ -61,11 +61,12 @@ class Plane:
 
     from math import radians, degrees, sin, cos, asin, acos, sqrt
 
-    def get_position(self):
+    def get_position(self,elapsed = None):
         
         delta = datetime.now() - self.position_time
         elapsed_time = int(delta.total_seconds())
-        eleapsed_time = 0
+        if elapsed is not None:
+            elapsed_time = elapsed
 
         # Convert track and speed into radians and nautical miles
         track_rad = radians(float(self.track))
@@ -82,9 +83,10 @@ class Plane:
                            cos(lat_rad) * sin(distance / radius_earth) * cos(track_rad))
 
         # New longitude in radians
-        new_lon_rad = float(self.longitude) + degrees(acos((sin(new_lat_rad) - sin(lat_rad) * sin(lat_rad)) /
-                                         (cos(lat_rad) * cos(new_lat_rad))) * 
-                                   (-1 if sin(track_rad) < 0 else 1))
+        lon_rad = radians(float(self.longitude))  # Convert original longitude to radians
+        new_lon_rad = lon_rad + atan2(sin(track_rad) * sin(distance / radius_earth) * cos(lat_rad), 
+                                      cos(distance / radius_earth) - sin(lat_rad) * sin(new_lat_rad))
+
 
         # Convert new latitude and longitude to degrees
         new_lat = degrees(new_lat_rad)
@@ -116,13 +118,19 @@ class Plane:
 # Test function
 def test():
     plane= Plane("")
-    plane.track="180.0"
-    plane.ground_speed="0.0"
-    plane.latitude="60.0"
+    plane.ground_speed="60.0"
+    plane.latitude="00.0"
     plane.longitude="0.0"
     plane.altitude="10000"
     plane.position_time = datetime.now()
-    plane.get_position()
+    plane.track="0"
+    plane.get_position(3600)
+    plane.track="90.0"
+    plane.get_position(3600)
+    plane.track="180.0"
+    plane.get_position(3600)
+    plane.track="270.0"
+    plane.get_position(3600)
     
 
 # This part ensures that the following code runs only when the script is executed directly
