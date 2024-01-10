@@ -9,7 +9,10 @@ debug = True
 
 planes = {}
 
-
+# Radius of the Earth in nautical miles
+earth_radius_nm = 3440.065
+# and metres
+earth_radius_metres = 6371000
 
 class Target:
     def __init__(self,id,az,dist,ele):
@@ -75,20 +78,17 @@ class Plane:
         track_rad = radians(float(self.track))
         distance = float(self.ground_speed) * (elapsed_time / 3600)  # Distance in nautical miles
 
-        # Radius of the Earth in nautical miles
-        radius_earth = 3440.065
-
         # Convert latitude to radians
         lat_rad = radians(float(self.latitude))
 
         # New latitude in radians
-        new_lat_rad = asin(sin(lat_rad) * cos(distance / radius_earth) +
-                           cos(lat_rad) * sin(distance / radius_earth) * cos(track_rad))
+        new_lat_rad = asin(sin(lat_rad) * cos(distance / earth_radius_nm) +
+                           cos(lat_rad) * sin(distance / earth_radius_nm) * cos(track_rad))
 
         # New longitude in radians
         lon_rad = radians(float(self.longitude))  # Convert original longitude to radians
-        new_lon_rad = lon_rad + atan2(sin(track_rad) * sin(distance / radius_earth) * cos(lat_rad), 
-                                      cos(distance / radius_earth) - sin(lat_rad) * sin(new_lat_rad))
+        new_lon_rad = lon_rad + atan2(sin(track_rad) * sin(distance / earth_radius_nm) * cos(lat_rad), 
+                                      cos(distance / earth_radius_nm) - sin(lat_rad) * sin(new_lat_rad))
 
         # Convert new latitude and longitude to degrees
         new_lat = degrees(new_lat_rad)
@@ -101,10 +101,9 @@ class Plane:
             estimated_position = self.get_position()  # (latitude, longitude, altitude)
             # Correct the order of longitude and latitude
             fwd_azimuth, back_azimuth, distance = self.geod.inv(my_position[1], my_position[0], estimated_position[1], estimated_position[0])
-
-            earth_radius = 6371000  
+  
             distance = geodesic((my_position[0], my_position[1]), (estimated_position[0], estimated_position[1])).meters
-            drop = earth_radius - sqrt(earth_radius**2 - distance**2)
+            drop = earth_radius_metres - sqrt(earth_radius_metres**2 - distance**2)
             adjusted_target_height = estimated_position[2] - my_position[2]
 
             elevation_angle = degrees(atan2(adjusted_target_height - drop, distance))
