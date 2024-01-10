@@ -5,7 +5,7 @@ from plane import Plane
     
 my_location = ( 52.388137, -2.304576, 67.0) # lat, lon, height (metres)
 
-debug = True
+debug = False
 
 planes = {}
 

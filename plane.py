@@ -2,13 +2,14 @@ import csv
 import pyproj
 from datetime import datetime
 from math import radians, degrees, sin, cos, asin, acos, sqrt, atan2
-
-    
-my_location = ( 52.388137, -2.304576, 67.0) # lat, lon, height (metres)
+import numpy as np
+from geopy.distance import geodesic
 
 debug = True
 
 planes = {}
+
+
 
 class Target:
     def __init__(self,id,az,dist,ele):
@@ -16,6 +17,10 @@ class Target:
         self.azimuth=az
         self.distance = dist
         self.elevation = ele
+        
+    def __str__(self):
+        return f"Azimuth ({self.azimuth}, Distance: {self.distance}, Elevation: {self.elevation}"
+
 
 class Plane:
     geod = pyproj.Geod(ellps='WGS84')
@@ -59,8 +64,6 @@ class Plane:
         if position_updated:
             self.position_time = datetime.now()
 
-    from math import radians, degrees, sin, cos, asin, acos, sqrt
-
     def get_position(self,elapsed = None):
         
         delta = datetime.now() - self.position_time
@@ -87,23 +90,25 @@ class Plane:
         new_lon_rad = lon_rad + atan2(sin(track_rad) * sin(distance / radius_earth) * cos(lat_rad), 
                                       cos(distance / radius_earth) - sin(lat_rad) * sin(new_lat_rad))
 
-
         # Convert new latitude and longitude to degrees
         new_lat = degrees(new_lat_rad)
         new_lon = degrees(new_lon_rad)
-        print(self.latitude, self.longitude, new_lat, new_lon)
 
         return new_lat, new_lon, float(self.altitude) * 0.3048
-
+ 
     def get_target(self, my_position):
         try:
-            estimated_position = self.get_position()  # (latitude, longitude, altitude)  
+            estimated_position = self.get_position()  # (latitude, longitude, altitude)
             # Correct the order of longitude and latitude
-            print(my_position[1], my_position[0], estimated_position[1], estimated_position[0])
             fwd_azimuth, back_azimuth, distance = self.geod.inv(my_position[1], my_position[0], estimated_position[1], estimated_position[0])
-            altitude_difference = estimated_position[2] - my_position[2]  # Ensure both are in the same unit
-            los_distance = (distance**2 + altitude_difference**2)**0.5
-            elevation_angle = degrees(atan2(altitude_difference, distance))
+
+            earth_radius = 6371000  
+            distance = geodesic((my_position[0], my_position[1]), (estimated_position[0], estimated_position[1])).meters
+            drop = earth_radius - sqrt(earth_radius**2 - distance**2)
+            adjusted_target_height = estimated_position[2] - my_position[2]
+
+            elevation_angle = degrees(atan2(adjusted_target_height - drop, distance))
+
             return Target(self.hex_id, fwd_azimuth, int(distance / 1000), elevation_angle)
         
         except Exception as e:
@@ -117,6 +122,7 @@ class Plane:
 
 # Test function
 def test():
+    my_location = ( 0, 0, 0)
     plane= Plane("")
     plane.ground_speed="60.0"
     plane.latitude="00.0"
@@ -124,14 +130,20 @@ def test():
     plane.altitude="10000"
     plane.position_time = datetime.now()
     plane.track="0"
-    plane.get_position(3600)
+    print(plane.get_position(3600))
     plane.track="90.0"
-    plane.get_position(3600)
+    print(plane.get_position(3600))
     plane.track="180.0"
-    plane.get_position(3600)
+    print(plane.get_position(3600))
     plane.track="270.0"
-    plane.get_position(3600)
-    
+    print(plane.get_position(3600))
+    # eifel tower from London, should be about -1.5 degrees
+    my_location =(51.5074, -0.1278, 50)
+    plane.ground_speed="0.0"
+    plane.latitude="48.858844"
+    plane.longitude="2.294351"
+    plane.altitude="1000"
+    print(plane.get_target(my_location))
 
 # This part ensures that the following code runs only when the script is executed directly
 if __name__ == "__main__":
